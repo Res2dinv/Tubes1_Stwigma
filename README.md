@@ -1,53 +1,86 @@
-# Battlecode 2025 Scaffold - Java
+# Tugas Besar 1 IF2211 Strategi Algoritma 2026
+> Battlecode 2025 — Java Scaffold
 
-This is the Battlecode 2025 Java scaffold, containing an `examplefuncsplayer`. Read https://play.battlecode.org/bc25java/quick_start !
+---
 
+## 👥 Authors
 
-### Project Structure
+| Nama | NIM |
+|------|-----|
+| Daniel Anindito Nugroho | 13524002 |
+| Syaqina Octavia Rizha | 13524088 |
+| Ishaq Irfan Farizal | 13524094 |
 
-- `README.md`
-    This file.
-- `build.gradle`
-    The Gradle build file used to build and run players.
-- `src/`
-    Player source code.
-- `test/`
-    Player test code.
-- `client/`
-    Contains the client. The proper executable can be found in this folder (don't move this!)
-- `build/`
-    Contains compiled player code and other artifacts of the build process. Can be safely ignored.
-- `matches/`
-    The output folder for match files.
-- `maps/`
-    The default folder for custom maps.
-- `gradlew`, `gradlew.bat`
-    The Unix (OS X/Linux) and Windows versions, respectively, of the Gradle wrapper. These are nifty scripts that you can execute in a terminal to run the Gradle build tasks of this project. If you aren't planning to do command line development, these can be safely ignored.
-- `gradle/`
-    Contains files used by the Gradle wrapper scripts. Can be safely ignored.
+---
 
-### How to get started
+## 🤖 Deskripsi Bot
 
-You are free to directly edit `examplefuncsplayer`.
-However, we recommend you make a new bot by copying `examplefuncsplayer` to a new package under the `src` folder.
+### 1. `control`
+Bot berbasis **greedy intensif** yang mengoptimalkan setiap aspek operasional secara mandiri. Navigasi menggunakan evaluasi 5 arah terdekat dengan sistem penalti tile, dilengkapi *bug navigation* untuk menghindari rintangan. Setiap unit bertindak egois — Soldier mengejar tower musuh, Mopper menyapu batas wilayah, Splasher memilih titik ledakan dengan dampak terluas. Manajemen paint dikendalikan ketat dengan mode *emergency refill* saat cadangan kritis, sementara tipe tower dipilih otomatis via algoritma modulo tanpa koordinasi antar unit.
 
-### Useful Commands
+### 2. `endthisgng`
+Bot berbasis **dua unit (Soldier & Splasher)** yang dikoordinasi Paint Tower dengan rasio komposisi greedy. Splasher agresif mengekspansi ke segala arah menggunakan sistem skor tile, sementara Soldier beroperasi dalam tiga prioritas terurut: cari ruin → cat pola tower → ekspansi area. Tower hanya fokus pada dua hal: serang musuh ber-HP rendah, atau spawn unit sesuai rasio lokal (Splasher diprioritaskan jika rasionya < 60%). Unit kembali ke tower saat paint < 60.
 
-- `./gradlew build`
-    Compiles your player
-- `./gradlew run`
-    Runs a game with the settings in gradle.properties
-- `./gradlew update`
-    Update configurations for the latest version -- run this often
-- `./gradlew zipForSubmit`
-    Create a submittable zip file
-- `./gradlew tasks`
-    See what else you can do!
+### 3. `abyss`
+Bot paling **koordinatif** dari ketiganya, mengandalkan Soldier dan Mopper dengan komunikasi aktif antar unit. Early game sebagian robot dipakai untuk verifikasi simetri peta, hasilnya disebarkan tower ke seluruh unit. Spawn unit bersifat reaktif — Mopper diprioritaskan saat ada *request* pembersihan ruin, Soldier menjadi tulang punggung ekspansi. Seluruh keputusan dibuat dari sensing lokal di awal giliran, menjaga bytecode tetap efisien sekaligus mempertahankan koordinasi tim yang lebih terstruktur dibanding dua bot lainnya.
 
+### Perbandingan
 
-### Configuration 
+| Aspek | `control` | `endthisgng` | `abyss` |
+|-------|-----------|--------------|---------|
+| Unit utama | Soldier, Mopper, Splasher | Soldier, Splasher | Soldier, Mopper |
+| Koordinasi | Mandiri | Rasio lokal | Komunikasi aktif |
+| Navigasi | Greedy + bug nav | Greedy + random | Greedy lokal |
+| Paint management | Emergency mode | Threshold 60 | Sensing lokal |
 
-Look at `gradle.properties` for project-wide configuration.
+---
 
-If you are having any problems with the default client, please report to teh devs and
-feel free to set the `compatibilityClient` configuration to `true` to download a different version of the client.
+## 📁 Project Structure
+
+```
+.
+├── README.md               # File ini
+├── build.gradle            # Gradle build file
+├── gradle.properties       # Konfigurasi project
+├── gradlew                 # Gradle wrapper (Unix/macOS)
+├── gradlew.bat             # Gradle wrapper (Windows)
+├── gradle/                 # File pendukung Gradle wrapper
+├── src/                    # Source code bot
+├── test/                   # Test code
+├── client/                 # Client untuk menjalankan match
+├── build/                  # Output kompilasi (dapat diabaikan)
+├── matches/                # Output file match
+└── maps/                   # Custom maps
+```
+
+---
+
+## 🚀 How to Get Started
+
+Kamu bebas mengedit langsung `examplefuncsplayer`, namun disarankan membuat bot baru dengan menyalin folder tersebut ke package baru di dalam `src/`.
+
+---
+
+## 🛠️ Useful Commands
+
+| Command | Fungsi |
+|---------|--------|
+| `./gradlew build` | Kompilasi player |
+| `./gradlew run` | Jalankan game sesuai `gradle.properties` |
+| `./gradlew update` | Update ke versi terbaru (jalankan sering!) |
+| `./gradlew zipForSubmit` | Buat file zip untuk submit |
+| `./gradlew tasks` | Lihat semua task yang tersedia |
+
+> **Windows:** Gunakan `gradlew` (tanpa `./`) di Command Prompt, atau `./gradlew` di PowerShell.
+
+---
+
+## ⚙️ Configuration
+
+Konfigurasi project tersedia di `gradle.properties`.
+
+Jika mengalami masalah dengan client default, laporkan ke devs dan coba set:
+```properties
+compatibilityClient=true
+```
+untuk mengunduh versi client alternatif.
