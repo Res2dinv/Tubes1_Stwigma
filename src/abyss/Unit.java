@@ -23,6 +23,15 @@ public abstract class Unit extends Robot {
     protected MapLocation explorationTarget = null;
     protected MapLocation lastReportedTower = null;
 
+    protected MapInfo[] nearbyMapInfos = new MapInfo[0];
+    protected RobotInfo[] nearbyAllies = new RobotInfo[0];
+    protected RobotInfo[] nearbyEnemies = new RobotInfo[0];
+    protected MapInfo currentTileInfo = null;
+    protected MapLocation sensedNearestNeutral = null;
+    protected MapLocation sensedNearestEnemyPaint = null;
+    protected MapLocation sensedAttackableEnemyPaint = null;
+    protected MapLocation sensedNearestSafeRuin = null;
+
     protected Unit(RobotController rc) {
         super(rc);
     }
@@ -30,6 +39,7 @@ public abstract class Unit extends Robot {
     @Override
     protected void takeTurn() throws GameActionException {
         updateCommonState();
+        senseTurnContext();
         markNearbySafeRuinPattern();
         chooseExplorationTarget();
         state = chooseState();
@@ -40,6 +50,55 @@ public abstract class Unit extends Robot {
     protected abstract UnitState chooseState() throws GameActionException;
 
     protected abstract void playState() throws GameActionException;
+
+    protected void senseTurnContext() throws GameActionException {
+        nearbyMapInfos = rc.senseNearbyMapInfos();
+        nearbyAllies = rc.senseNearbyRobots(-1, team);
+        nearbyEnemies = rc.senseNearbyRobots(-1, opponent);
+        currentTileInfo = rc.senseMapInfo(rc.getLocation());
+
+        sensedNearestNeutral = null;
+        sensedNearestEnemyPaint = null;
+        sensedAttackableEnemyPaint = null;
+        sensedNearestSafeRuin = null;
+
+        MapLocation current = rc.getLocation();
+        int neutralDistance = Integer.MAX_VALUE;
+        int enemyDistance = Integer.MAX_VALUE;
+        int attackableDistance = Integer.MAX_VALUE;
+        int ruinDistance = Integer.MAX_VALUE;
+
+        for (MapInfo info : nearbyMapInfos) {
+            MapLocation location = info.getMapLocation();
+            if (info.hasRuin() && !ruinHasEnemyPaint(location)) {
+                int distance = current.distanceSquaredTo(location);
+                if (distance < ruinDistance) {
+                    ruinDistance = distance;
+                    sensedNearestSafeRuin = location;
+                }
+            }
+            if (!info.isPassable() || info.hasRuin()) {
+                continue;
+            }
+            if (info.getPaint() == PaintType.EMPTY) {
+                int distance = current.distanceSquaredTo(location);
+                if (distance < neutralDistance) {
+                    neutralDistance = distance;
+                    sensedNearestNeutral = location;
+                }
+            } else if (info.getPaint().isEnemy()) {
+                int distance = current.distanceSquaredTo(location);
+                if (distance < enemyDistance) {
+                    enemyDistance = distance;
+                    sensedNearestEnemyPaint = location;
+                }
+                if (rc.canAttack(location) && distance < attackableDistance) {
+                    attackableDistance = distance;
+                    sensedAttackableEnemyPaint = location;
+                }
+            }
+        }
+    }
 
     protected void chooseExplorationTarget() {
         if (shouldScoutSymmetry() && symmetry == Symmetry.UNKNOWN) {
@@ -60,7 +119,7 @@ public abstract class Unit extends Robot {
             return;
         }
 
-        MapLocation observedRuin = getNearestKnownTower(abyss.Util.TowerInfo.STATUS_RUIN);
+        MapLocation observedRuin = getNearestKnownTower(TowerInfo.STATUS_RUIN);
         if (observedRuin != null) {
             explorationTarget = observedRuin;
             return;
@@ -194,9 +253,8 @@ public abstract class Unit extends Robot {
     }
 
     protected boolean localAreaFullyAllied() {
-        MapInfo[] infos = rc.senseNearbyMapInfos();
         boolean foundWalkable = false;
-        for (MapInfo info : infos) {
+        for (MapInfo info : nearbyMapInfos) {
             if (!info.isPassable() || info.hasRuin()) {
                 continue;
             }
@@ -232,7 +290,7 @@ public abstract class Unit extends Robot {
     }
 
     protected boolean refillFromKnownTower() throws GameActionException {
-        MapLocation target = knownPaintTower != null ? knownPaintTower : getNearestKnownTower(abyss.Util.TowerInfo.STATUS_ALLY);
+        MapLocation target = knownPaintTower != null ? knownPaintTower : getNearestKnownTower(TowerInfo.STATUS_ALLY);
         if (target == null) {
             return false;
         }
@@ -252,73 +310,8 @@ public abstract class Unit extends Robot {
         return false;
     }
 
-    protected MapLocation nearestNeutralPaintableTile() throws GameActionException {
-        MapInfo[] infos = rc.senseNearbyMapInfos();
-        MapLocation current = rc.getLocation();
-        MapLocation best = null;
-        int bestDistance = Integer.MAX_VALUE;
-        for (MapInfo info : infos) {
-            if (!info.isPassable() || info.hasRuin()) {
-                continue;
-            }
-            if (info.getPaint() != PaintType.EMPTY) {
-                continue;
-            }
-            int distance = current.distanceSquaredTo(info.getMapLocation());
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                best = info.getMapLocation();
-            }
-        }
-        return best;
-    }
-
-    protected MapLocation nearestEnemyPaintTile() throws GameActionException {
-        MapInfo[] infos = rc.senseNearbyMapInfos();
-        MapLocation current = rc.getLocation();
-        MapLocation best = null;
-        int bestDistance = Integer.MAX_VALUE;
-        for (MapInfo info : infos) {
-            if (!info.getPaint().isEnemy()) {
-                continue;
-            }
-            int distance = current.distanceSquaredTo(info.getMapLocation());
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                best = info.getMapLocation();
-            }
-        }
-        return best;
-    }
-
-    protected MapLocation attackableEnemyPaintTile() throws GameActionException {
-        MapInfo[] infos = rc.senseNearbyMapInfos(rc.getType().actionRadiusSquared);
-        MapLocation current = rc.getLocation();
-        MapLocation best = null;
-        int bestDistance = Integer.MAX_VALUE;
-        for (MapInfo info : infos) {
-            if (!info.getPaint().isEnemy()) {
-                continue;
-            }
-            MapLocation location = info.getMapLocation();
-            if (!rc.canAttack(location)) {
-                continue;
-            }
-            int distance = current.distanceSquaredTo(location);
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                best = location;
-            }
-        }
-        return best;
-    }
-
     protected MapLocation nearestEnemyTower() {
-        return getNearestKnownTower(abyss.Util.TowerInfo.STATUS_ENEMY);
-    }
-
-    protected MapLocation nearestBuildableRuin() {
-        return getNearestKnownTower(abyss.Util.TowerInfo.STATUS_RUIN);
+        return getNearestKnownTower(TowerInfo.STATUS_ENEMY);
     }
 
     protected void markNearbySafeRuinPattern() throws GameActionException {
@@ -336,12 +329,15 @@ public abstract class Unit extends Robot {
     }
 
     protected MapLocation nearestMarkableSafeRuin() throws GameActionException {
+        if (sensedNearestSafeRuin != null) {
+            return sensedNearestSafeRuin;
+        }
         MapLocation best = null;
         int bestDistance = Integer.MAX_VALUE;
         MapLocation current = rc.getLocation();
         for (int i = 0; i < towerInfoCount; i++) {
             TowerInfo info = towerInfos[i];
-            if (info.status != abyss.Util.TowerInfo.STATUS_RUIN) {
+            if (info.status != TowerInfo.STATUS_RUIN) {
                 continue;
             }
             MapLocation ruin = info.location;
@@ -435,17 +431,13 @@ public abstract class Unit extends Robot {
         if (!rc.isActionReady()) {
             return;
         }
-        MapLocation target = nearestNeutralPaintableTile();
-        if (target != null && rc.canAttack(target)) {
-            rc.attack(target);
+        if (sensedNearestNeutral != null && rc.canAttack(sensedNearestNeutral)) {
+            rc.attack(sensedNearestNeutral);
             return;
         }
-        tryPaintCurrentTile();
+        if (currentTileInfo != null && currentTileInfo.getPaint() == PaintType.EMPTY && rc.canAttack(rc.getLocation())) {
+            rc.attack(rc.getLocation());
+        }
     }
 
-    protected boolean canBuildAnyTower(MapLocation ruin) throws GameActionException {
-        return rc.canCompleteTowerPattern(UnitType.LEVEL_ONE_PAINT_TOWER, ruin)
-                || rc.canCompleteTowerPattern(UnitType.LEVEL_ONE_MONEY_TOWER, ruin)
-                || rc.canCompleteTowerPattern(UnitType.LEVEL_ONE_DEFENSE_TOWER, ruin);
-    }
 }

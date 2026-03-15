@@ -9,6 +9,10 @@ import battlecode.common.UnitType;
 
 public abstract class Tower extends Robot {
     private static final int SYMMETRY_BROADCAST_PERIOD = 12;
+    private static final int MAX_NEARBY_FIELD_UNITS = 4;
+    private static final int MAX_MID_FIELD_UNITS = 3;
+    private static final int MAX_CLOSE_FIELD_UNITS = 1;
+    private int lastSpawnRound = -100;
 
     protected Tower(RobotController rc) {
         super(rc);
@@ -58,20 +62,56 @@ public abstract class Tower extends Robot {
         if (!rc.isActionReady()) {
             return;
         }
+        RobotInfo[] allies = rc.senseNearbyRobots(-1, team);
+        int nearbyFieldUnits = countFieldUnits(allies, 20);
+        int midFieldUnits = countFieldUnits(allies, 8);
+        int closeFieldUnits = countFieldUnits(allies, 2);
+        boolean urgentMopper = requestedMopperTarget != null && countType(allies, UnitType.MOPPER) == 0;
+
+        if (!urgentMopper) {
+            if (nearbyFieldUnits >= MAX_NEARBY_FIELD_UNITS
+                    || midFieldUnits >= MAX_MID_FIELD_UNITS
+                    || closeFieldUnits >= MAX_CLOSE_FIELD_UNITS) {
+                return;
+            }
+            if (rc.getRoundNum() - lastSpawnRound < spawnGapForRound()) {
+                return;
+            }
+        }
+
         UnitType spawnType = chooseSpawnType();
         if (spawnType == null) {
             return;
         }
+        if (!urgentMopper && !hasResourceBufferFor(spawnType)) {
+            return;
+        }
         MapLocation center = rc.getLocation();
+        int openSpawnTiles = 0;
+        for (battlecode.common.Direction direction : DIRECTIONS) {
+            MapLocation first = center.add(direction);
+            if (rc.canBuildRobot(spawnType, first)) {
+                openSpawnTiles++;
+            }
+            MapLocation second = first.add(direction);
+            if (rc.canBuildRobot(spawnType, second)) {
+                openSpawnTiles++;
+            }
+        }
+        if (!urgentMopper && openSpawnTiles <= 1) {
+            return;
+        }
         for (battlecode.common.Direction direction : DIRECTIONS) {
             MapLocation first = center.add(direction);
             if (rc.canBuildRobot(spawnType, first)) {
                 rc.buildRobot(spawnType, first);
+                lastSpawnRound = rc.getRoundNum();
                 return;
             }
             MapLocation second = first.add(direction);
             if (rc.canBuildRobot(spawnType, second)) {
                 rc.buildRobot(spawnType, second);
+                lastSpawnRound = rc.getRoundNum();
                 return;
             }
         }
@@ -126,6 +166,67 @@ public abstract class Tower extends Robot {
             return UnitType.MOPPER;
         }
         return null;
+    }
+
+    private int spawnGapForRound() {
+        if (rc.getRoundNum() < 150) {
+            return 8;
+        }
+        if (rc.getRoundNum() < 800) {
+            return 12;
+        }
+        return 18;
+    }
+
+    private int countFieldUnits(RobotInfo[] allies, int radiusSquared) {
+        int count = 0;
+        for (RobotInfo ally : allies) {
+            if (ally.getType().isTowerType()) {
+                continue;
+            }
+            if (radiusSquared != Integer.MAX_VALUE && ally.location.distanceSquaredTo(rc.getLocation()) > radiusSquared) {
+                continue;
+            }
+            count++;
+        }
+        return count;
+    }
+
+    private boolean hasResourceBufferFor(UnitType spawnType) {
+        int paintReserve = paintReserveForRound();
+        int chipReserve = chipReserveForRound();
+        return rc.getPaint() - spawnType.paintCost >= paintReserve
+                && rc.getChips() - spawnType.moneyCost >= chipReserve;
+    }
+
+    private int paintReserveForRound() {
+        if (rc.getRoundNum() < 200) {
+            return 350;
+        }
+        if (rc.getRoundNum() < 900) {
+            return 275;
+        }
+        return 220;
+    }
+
+    private int chipReserveForRound() {
+        if (rc.getRoundNum() < 200) {
+            return 600;
+        }
+        if (rc.getRoundNum() < 900) {
+            return 450;
+        }
+        return 325;
+    }
+
+    private int countType(RobotInfo[] allies, UnitType type) {
+        int count = 0;
+        for (RobotInfo ally : allies) {
+            if (ally.getType() == type) {
+                count++;
+            }
+        }
+        return count;
     }
 
     private void attackLowestHealthEnemy() throws GameActionException {

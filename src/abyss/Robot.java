@@ -9,7 +9,6 @@ import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import battlecode.common.MapInfo;
 import battlecode.common.MapLocation;
-import battlecode.common.PaintType;
 import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.Team;
@@ -318,30 +317,6 @@ public abstract class Robot {
         return rc.getPaint() <= rc.getType().paintCapacity * ratio;
     }
 
-    protected boolean tryAttack(MapLocation target) throws GameActionException {
-        if (target != null && rc.canAttack(target)) {
-            rc.attack(target);
-            return true;
-        }
-        return false;
-    }
-
-    protected boolean tryPaintCurrentTile() throws GameActionException {
-        MapLocation here = rc.getLocation();
-        if (!rc.isActionReady()) {
-            return false;
-        }
-        if (!rc.canSenseLocation(here)) {
-            return false;
-        }
-        MapInfo info = rc.senseMapInfo(here);
-        if (info.getPaint() == PaintType.EMPTY && rc.canAttack(here)) {
-            rc.attack(here);
-            return true;
-        }
-        return false;
-    }
-
     protected void sendSymmetryIfPossible() throws GameActionException {
         if (symmetry == Symmetry.UNKNOWN || symmetryShared) {
             return;
@@ -358,6 +333,7 @@ public abstract class Robot {
                 break;
             }
         }
+        // System.out.println("kirim pesan yey" + payload);
     }
 
     protected void sendMopperRequestIfPossible(MapLocation target) throws GameActionException {

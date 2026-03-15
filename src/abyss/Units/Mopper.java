@@ -13,16 +13,16 @@ public class Mopper extends Unit {
 
     @Override
     protected UnitState chooseState() throws GameActionException {
-        if (lowPaint(0.18)) {
+        if (lowPaint(0.25)) {
             return UnitState.REFILL;
         }
         if (requestedMopperTarget != null) {
             return UnitState.MOP;
         }
-        if (attackableEnemyPaintTile() != null) {
+        if (sensedAttackableEnemyPaint != null) {
             return UnitState.MOP;
         }
-        if (nearestEnemyPaintTile() != null) {
+        if (sensedNearestEnemyPaint != null) {
             return UnitState.MOP;
         }
         return UnitState.EXPLORE;
@@ -66,15 +66,13 @@ public class Mopper extends Unit {
     }
 
     private void exploreArea() throws GameActionException {
-        MapLocation sensedEnemyPaint = nearestEnemyPaintTile();
-        if (sensedEnemyPaint != null) {
-            moveLocalDijkstra(sensedEnemyPaint);
+        if (sensedNearestEnemyPaint != null) {
+            moveLocalDijkstra(sensedNearestEnemyPaint);
             return;
         }
 
-        MapLocation neutral = nearestNeutralPaintableTile();
-        if (neutral != null) {
-            moveGreedy(neutral);
+        if (sensedNearestNeutral != null) {
+            moveGreedy(sensedNearestNeutral);
             return;
         }
         if (explorationTarget != null) {
@@ -104,6 +102,6 @@ public class Mopper extends Unit {
         if (best != null) {
             return best;
         }
-        return nearestEnemyPaintTile();
+        return sensedNearestEnemyPaint;
     }
 }

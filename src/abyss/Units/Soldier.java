@@ -12,6 +12,9 @@ import battlecode.common.UnitType;
 public class Soldier extends Unit {
     private static final int EARLY_SCOUT_WINDOW = 100;
     private static final int ROLLING_BUILD_WINDOW = 40;
+
+    private final MapLocation[] listColoring = new MapLocation[25];
+    private int listColoringCount = 0;
     private MapLocation blockedRuin = null;
     private int blockedUntilRound = -1;
 
@@ -27,7 +30,7 @@ public class Soldier extends Unit {
         if (shouldPrioritizeSymmetryScout()) {
             return UnitState.EXPLORE;
         }
-        if (preferredBuildRuin() != null && rc.getChips() >= 1000) {
+        if (shouldBuildRuin() != null && rc.getChips() >= 1000) {
             return UnitState.BUILD;
         }
         if (nearestEnemyTower() != null && shouldAttackEnemyTower()) {
@@ -48,7 +51,7 @@ public class Soldier extends Unit {
     }
 
     private void buildTowerPattern() throws GameActionException {
-        MapLocation ruin = preferredBuildRuin();
+        MapLocation ruin = shouldBuildRuin();
         if (ruin == null) {
             exploreAndPaint();
             return;
@@ -71,44 +74,84 @@ public class Soldier extends Unit {
         }
 
         if (rc.canCompleteTowerPattern(towerType, ruin)) {
-            rc.completeTowerPattern(towerType, ruin);
-            rememberTower(ruin, TowerInfo.STATUS_ALLY, rc.getRoundNum());
-            if (isPaintTower(towerType)) {
-                knownPaintTower = ruin;
-            }
-            lastReportedTower = ruin;
+            finishTowerBuild(ruin, towerType);
             return;
         }
 
-        if (rc.getLocation().distanceSquaredTo(ruin) > 8) {
+        if (rc.getLocation().distanceSquaredTo(ruin) > 2) {
             moveLocalDijkstra(ruin);
             return;
         }
+
         if (rc.canMarkTowerPattern(towerType, ruin)) {
             rc.markTowerPattern(towerType, ruin);
         }
 
-        MapLocation patternTarget = nearestPatternMismatch(ruin);
-        if (patternTarget != null) {
-            if (rc.canAttack(patternTarget)) {
-                rc.attack(patternTarget, useSecondaryForPattern(patternTarget));
+        buildColoringList(ruin);
+        MapLocation colorTarget = nearestColoringTarget();
+        if (colorTarget != null) {
+            if (rc.canAttack(colorTarget)) {
+                MapInfo info = rc.senseMapInfo(colorTarget);
+                rc.attack(colorTarget, info.getMark() == PaintType.ALLY_SECONDARY);
             } else if (rc.isMovementReady()) {
-                moveLocalDijkstra(patternTarget);
+                moveLocalDijkstra(colorTarget);
             }
-        } else {
-            paintNearbyNeutralTile();
         }
 
         if (rc.canCompleteTowerPattern(towerType, ruin)) {
-            rc.completeTowerPattern(towerType, ruin);
-            rememberTower(ruin, TowerInfo.STATUS_ALLY, rc.getRoundNum());
-            if (isPaintTower(towerType)) {
-                knownPaintTower = ruin;
-            }
-            lastReportedTower = ruin;
-        } else if (rc.isMovementReady() && patternTarget == null) {
-            moveGreedy(ruin);
+            finishTowerBuild(ruin, towerType);
         }
+    }
+
+    private void finishTowerBuild(MapLocation ruin, UnitType towerType) throws GameActionException {
+        rc.completeTowerPattern(towerType, ruin);
+        rememberTower(ruin, TowerInfo.STATUS_ALLY, rc.getRoundNum());
+        if (isPaintTower(towerType)) {
+            knownPaintTower = ruin;
+        }
+        lastReportedTower = ruin;
+    }
+
+    private void buildColoringList(MapLocation ruin) throws GameActionException {
+        listColoringCount = 0;
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dy = -2; dy <= 2; dy++) {
+                MapLocation tile = ruin.translate(dx, dy);
+                if (!rc.onTheMap(tile) || !rc.canSenseLocation(tile)) {
+                    continue;
+                }
+                MapInfo info = rc.senseMapInfo(tile);
+                if (!info.isPassable() || info.hasRuin()) {
+                    continue;
+                }
+                PaintType desired = desiredPatternPaint(info);
+                if (desired == info.getPaint()) {
+                    continue;
+                }
+                if (listColoringCount < listColoring.length) {
+                    listColoring[listColoringCount++] = tile;
+                }
+            }
+        }
+    }
+
+    private MapLocation nearestColoringTarget() {
+        MapLocation best = null;
+        int bestDistance = Integer.MAX_VALUE;
+        MapLocation current = rc.getLocation();
+        for (int i = 0; i < listColoringCount; i++) {
+            MapLocation tile = listColoring[i];
+            int distance = current.distanceSquaredTo(tile);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = tile;
+            }
+        }
+        return best;
+    }
+
+    private PaintType desiredPatternPaint(MapInfo info) {
+        return info.getMark() == PaintType.ALLY_PRIMARY ? PaintType.ALLY_PRIMARY : PaintType.ALLY_SECONDARY;
     }
 
     private void attackEnemyTower() throws GameActionException {
@@ -127,14 +170,12 @@ public class Soldier extends Unit {
 
     private void exploreAndPaint() throws GameActionException {
         paintNearbyNeutralTile();
-        MapLocation localNeutral = nearestNeutralPaintableTile();
-        if (localNeutral != null && rc.getLocation().distanceSquaredTo(localNeutral) > 2) {
-            moveGreedy(localNeutral);
+        if (sensedNearestNeutral != null && rc.getLocation().distanceSquaredTo(sensedNearestNeutral) > 2) {
+            moveGreedy(sensedNearestNeutral);
             return;
         }
-        MapLocation attackableEnemyPaint = attackableEnemyPaintTile();
-        if (attackableEnemyPaint != null && rc.isActionReady()) {
-            rc.attack(attackableEnemyPaint);
+        if (sensedAttackableEnemyPaint != null && rc.isActionReady()) {
+            rc.attack(sensedAttackableEnemyPaint);
             return;
         }
         if (explorationTarget != null) {
@@ -142,7 +183,12 @@ public class Soldier extends Unit {
         }
     }
 
-    private MapLocation preferredBuildRuin() {
+    private MapLocation shouldBuildRuin() {
+        MapLocation startedPattern = preferredStartedRuin();
+        if (startedPattern != null) {
+            return startedPattern;
+        }
+
         MapLocation best = null;
         int bestDistance = Integer.MAX_VALUE;
         MapLocation current = rc.getLocation();
@@ -165,6 +211,40 @@ public class Soldier extends Unit {
         return best;
     }
 
+    private MapLocation preferredStartedRuin() {
+        MapLocation best = null;
+        int bestDistance = Integer.MAX_VALUE;
+        MapLocation current = rc.getLocation();
+        for (int i = 0; i < towerInfoCount; i++) {
+            TowerInfo info = towerInfos[i];
+            if (info.status != TowerInfo.STATUS_RUIN) {
+                continue;
+            }
+            if (blockedRuin != null
+                    && info.location.equals(blockedRuin)
+                    && rc.getRoundNum() < blockedUntilRound) {
+                continue;
+            }
+            try {
+                if (!rc.canSenseLocation(info.location) || !ruinHasAnyPatternMark(info.location)) {
+                    continue;
+                }
+                buildColoringList(info.location);
+                if (listColoringCount == 0) {
+                    continue;
+                }
+            } catch (GameActionException e) {
+                continue;
+            }
+            int distance = current.distanceSquaredTo(info.location);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = info.location;
+            }
+        }
+        return best;
+    }
+
     private boolean shouldPrioritizeSymmetryScout() {
         if (!shouldScoutSymmetry() || symmetry != abyss.Util.Symmetry.UNKNOWN) {
             return false;
@@ -172,44 +252,8 @@ public class Soldier extends Unit {
         if (rc.getRoundNum() > EARLY_SCOUT_WINDOW) {
             return false;
         }
-        MapLocation ruin = nearestBuildableRuin();
+        MapLocation ruin = getNearestKnownTower(TowerInfo.STATUS_RUIN);
         return ruin == null || rc.getLocation().distanceSquaredTo(ruin) > 4;
-    }
-
-    private MapLocation nearestPatternMismatch(MapLocation ruin) throws GameActionException {
-        MapLocation best = null;
-        int bestDistance = Integer.MAX_VALUE;
-        for (int dx = -2; dx <= 2; dx++) {
-            for (int dy = -2; dy <= 2; dy++) {
-                MapLocation tile = ruin.translate(dx, dy);
-                if (!rc.onTheMap(tile) || !rc.canSenseLocation(tile)) {
-                    continue;
-                }
-                MapInfo info = rc.senseMapInfo(tile);
-                if (!info.isPassable() || info.hasRuin()) {
-                    continue;
-                }
-                PaintType desired = desiredPatternPaint(info.getMark());
-                PaintType actual = info.getPaint();
-                if (actual == desired) {
-                    continue;
-                }
-                int distance = rc.getLocation().distanceSquaredTo(tile);
-                if (distance < bestDistance) {
-                    bestDistance = distance;
-                    best = tile;
-                }
-            }
-        }
-        return best;
-    }
-
-    private boolean useSecondaryForPattern(MapLocation tile) throws GameActionException {
-        return desiredPatternPaint(rc.senseMapInfo(tile).getMark()) == PaintType.ALLY_SECONDARY;
-    }
-
-    private PaintType desiredPatternPaint(PaintType mark) {
-        return mark == PaintType.ALLY_PRIMARY ? PaintType.ALLY_PRIMARY : PaintType.ALLY_SECONDARY;
     }
 
     private boolean shouldAttackEnemyTower() {
