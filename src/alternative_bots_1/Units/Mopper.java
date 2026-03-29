@@ -1,6 +1,7 @@
 package alternative_bot_1.Units;
 
-import alternative_bot_1.*;
+import alternative_bot_1.Unit;
+import alternative_bot_1.Util.TowerInfo;
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
@@ -85,7 +86,7 @@ public class Mopper extends Unit {
         int bestDistance = Integer.MAX_VALUE;
 
         for (int i = 0; i < towerInfoCount; i++) {
-            if (towerInfos[i].status != alternative_bot_1.Util.TowerInfo.STATUS_RUIN) {
+            if (towerInfos[i].status != TowerInfo.STATUS_RUIN) {
                 continue;
             }
             MapLocation dirtyTile = firstEnemyPaintAroundRuin(towerInfos[i].location);

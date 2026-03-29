@@ -1,6 +1,8 @@
 package alternative_bot_1.Units;
 
-import alternative_bot_1.*;
+import alternative_bot_1.Unit;
+import alternative_bot_1.Util.Symmetry;
+import alternative_bot_1.Util.TowerInfo;
 import battlecode.common.GameActionException;
 import battlecode.common.MapInfo;
 import battlecode.common.MapLocation;
@@ -245,7 +247,7 @@ public class Soldier extends Unit {
     }
 
     private boolean shouldPrioritizeSymmetryScout() {
-        if (!shouldScoutSymmetry() || symmetry != .Util.Symmetry.UNKNOWN) {
+        if (!shouldScoutSymmetry() || symmetry != Symmetry.UNKNOWN) {
             return false;
         }
         if (rc.getRoundNum() > EARLY_SCOUT_WINDOW) {

@@ -1,6 +1,9 @@
 package alternative_bot_1;
 
-import alternative_bot_1.*;
+import alternative_bot_1.Util.Comms;
+import alternative_bot_1.Util.GreedyMove;
+import alternative_bot_1.Util.Symmetry;
+import alternative_bot_1.Util.TowerInfo;
 import battlecode.common.Clock;
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;

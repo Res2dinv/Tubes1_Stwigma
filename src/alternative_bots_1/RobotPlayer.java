@@ -1,6 +1,11 @@
 package alternative_bot_1;
 
-import alternative_bot_1.*;
+import alternative_bot_1.Towers.DefenseTower;
+import alternative_bot_1.Towers.MoneyTower;
+import alternative_bot_1.Towers.PaintTower;
+import alternative_bot_1.Units.Mopper;
+import alternative_bot_1.Units.Soldier;
+import alternative_bot_1.Units.Splasher;
 import battlecode.common.GameActionException;
 import battlecode.common.RobotController;
 import battlecode.common.UnitType;

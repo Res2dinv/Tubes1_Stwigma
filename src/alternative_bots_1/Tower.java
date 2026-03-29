@@ -1,6 +1,7 @@
 package alternative_bot_1;
 
-import alternative_bot_1.*;
+import alternative_bot_1.Util.Symmetry;
+import alternative_bot_1.Util.TowerInfo;
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
@@ -30,7 +31,7 @@ public abstract class Tower extends Robot {
     }
 
     private void broadcastSymmetryIfPossible() throws GameActionException {
-        if (symmetry != alternative_bot_1.Util.Symmetry.UNKNOWN
+        if (symmetry != Symmetry.UNKNOWN
                 && rc.canBroadcastMessage()
                 && rc.getRoundNum() % SYMMETRY_BROADCAST_PERIOD == 0) {
             rc.broadcastMessage(comms.encodeSymmetry(symmetry));
@@ -47,7 +48,7 @@ public abstract class Tower extends Robot {
                 rc.sendMessage(ally.location, comms.encodeMopperTarget(requestedMopperTarget));
                 continue;
             }
-            if (symmetry != alternative_bot_1.Util.Symmetry.UNKNOWN) {
+            if (symmetry != Symmetry.UNKNOWN) {
                 rc.sendMessage(ally.location, comms.encodeSymmetry(symmetry));
                 continue;
             }
