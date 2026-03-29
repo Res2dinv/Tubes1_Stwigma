@@ -1,11 +1,6 @@
-package abyss;
+package alternative_bot_1;
 
-import abyss.Towers.DefenseTower;
-import abyss.Towers.MoneyTower;
-import abyss.Towers.PaintTower;
-import abyss.Units.Mopper;
-import abyss.Units.Soldier;
-import abyss.Units.Splasher;
+import alternative_bot_1.*;
 import battlecode.common.GameActionException;
 import battlecode.common.RobotController;
 import battlecode.common.UnitType;

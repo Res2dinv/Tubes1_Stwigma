@@ -1,7 +1,6 @@
-package abyss.Units;
+package alternative_bot_1.Units;
 
-import abyss.Unit;
-import abyss.Util.TowerInfo;
+import alternative_bot_1.*;
 import battlecode.common.GameActionException;
 import battlecode.common.MapInfo;
 import battlecode.common.MapLocation;
@@ -246,7 +245,7 @@ public class Soldier extends Unit {
     }
 
     private boolean shouldPrioritizeSymmetryScout() {
-        if (!shouldScoutSymmetry() || symmetry != abyss.Util.Symmetry.UNKNOWN) {
+        if (!shouldScoutSymmetry() || symmetry != .Util.Symmetry.UNKNOWN) {
             return false;
         }
         if (rc.getRoundNum() > EARLY_SCOUT_WINDOW) {

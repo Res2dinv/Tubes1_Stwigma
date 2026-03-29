@@ -1,9 +1,6 @@
-package abyss;
+package alternative_bot_1;
 
-import abyss.Util.Comms;
-import abyss.Util.GreedyMove;
-import abyss.Util.Symmetry;
-import abyss.Util.TowerInfo;
+import alternative_bot_1.*;
 import battlecode.common.Clock;
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;

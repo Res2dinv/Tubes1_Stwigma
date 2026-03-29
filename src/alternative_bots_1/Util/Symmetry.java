@@ -1,4 +1,4 @@
-package abyss.Util;
+package alternative_bot_1.Util;
 
 import battlecode.common.MapLocation;
 

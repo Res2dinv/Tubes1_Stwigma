@@ -1,6 +1,6 @@
-package abyss.Units;
+package alternative_bot_1.Units;
 
-import abyss.Unit;
+import alternative_bot_1.Unit;
 import battlecode.common.GameActionException;
 import battlecode.common.MapInfo;
 import battlecode.common.MapLocation;

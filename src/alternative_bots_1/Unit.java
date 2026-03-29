@@ -1,7 +1,6 @@
-package abyss;
+package alternative_bot_1;
 
-import abyss.Util.Symmetry;
-import abyss.Util.TowerInfo;
+import alternative_bot_1.*;
 import battlecode.common.GameActionException;
 import battlecode.common.MapInfo;
 import battlecode.common.MapLocation;
