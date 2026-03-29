@@ -1,4 +1,4 @@
-package control;
+package alternative_bots_2;
 
 import java.util.Random;
 
